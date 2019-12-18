@@ -6,7 +6,7 @@ IP address : 174.129.232.166
 
 SSH port : 2200
 
-EC2 URL : http://ec2-174-129-232-166.us-west-2.compute.amazonaws.com/
+EC2 URL : 174.129.232.166.xip.io
 
 
 ## Configuration steps 
@@ -139,7 +139,9 @@ Configure your username and email. `git config --global user.name <username>` an
 
 Add `catalog.wsgi` file.
 
-Run `sudo nano catalog.wsgi` and add the following code.
+- ***`sudo nano catalog.wsgi`*** # Add `catalog.wsgi` file.
+
+and add the following code.
 
 ```
 import sys
@@ -148,95 +150,147 @@ logging.basicConfig(stream=sys.stderr)
 sys.path.insert(0, "/var/www/catalog/")
 
 from catalog import app as application
-application.secret_key = 'secret'
+application.secret_key = 'password'
 ```
 
 Modify filenames to deploy on AWS.
 
-Rename `webserver.py` to `__init__.py` 
 
-`mv webserver.py  __init__.py`
+- ***`mv application.py  __init__.py`*** # Rename your `application.py` to `__init__.py` 
+
 
 ### 11. Install virtual environment and Flask framework
+Run the following command as sudo in order to install the build-essential, libssl-dev, libffi-dev and python-dev packages to your system:
+- ***`sudo apt-get install build-essential libssl-dev libffi-dev python-dev`*** 
 
-Install `pip`, `sudo apt install python-pip`
+- ***`sudo apt install python3-pip`*** # Install `python3-pip`
 
-Run `sudo apt install python-virtualenv` to install virtual environment
+- ***`sudo apt-get upgrade python3`*** # upgrade python3 to latest version
 
-Create a new virtuall environment with `sudo virtualenv venv` and activate it `sudo service apache2 restart`
-source venv/bin/activate
-Change permissions to the viertual environment folder `sudo chmod -R 777 venv`
+- ***`sudo apt install -y python3-venv`*** # Create the  virtual environment
 
-Install Flask `pip install Flask` and dependencies `pip install bleach httplib2 request oauth2client sqlalchemy python-psycopg2.`
+- ***`mkdir environment_directory`*** # create your stand-alone virtual environments
 
-### 12. Configure Apache
+In the environments directory, we will be creating a new virtual environment where you can write your Python programs and create projects.
 
-Create a config file `sudo nano /etc/apache2/sites-available/catalog.conf`
+- ***`python3 -m venv catalog_venv`***  # creating a new virtual environment 
+- ***`source catalog_venv/bin/activate`*** # Activate the Python Virtual Environment
 
-Paste the following code
+- ***`sudo chmod -R 777 venv`*** # Change permissions to the viertual environment folder
+
+Install Flask and dependencies:
+
+- ***`sudo apt install python3-pip`***
+- ***`sudo apt install python3-psycopg2`***
+- ***`sudo pip3 install --upgrade pip`***
+- ***`sudo pip3 install Flask`***
+- ***`sudo pip3 install httplib2`***
+- ***`sudo pip3 install requests`***
+- ***`sudo pip3 install oauth2client`***
+- ***`sudo pip3 install sqlalchemy`***
+- ***`sudo pip3 install python3-psycopg2`***
+- ***`sudo pip3 install bleach`***
+- ***`sudo pip3 install flask_sqlalchemy`***
+- ***`sudo pip3 install psycopg2-binary`***
+- ***`python3 -m pip install flask-sqlalchemy`***
+- ***`python3 -m pip install passlib`***
+- ***`python3 -m pip install psycopg2`***
+
+
+### 12. Configure Apache and enable a new virtual host
+
+- ***`sudo nano /etc/apache2/sites-available/catalog.conf`*** # Create a virtual host conifg file
+
+
+
+Paste the following code:
 
 ```
 <VirtualHost *:80>
-    ServerName Public-IP-Address
-    ServerAdmin admin@Public-IP-Address
-    WSGIScriptAlias / /var/www/catalog/catalog.wsgi
-    <Directory /var/www/catalog/catalog/>
-        Order allow,deny
-        Allow from all
-    </Directory>
-    Alias /static /var/www/catalog/catalog/static
-    <Directory /var/www/catalog/catalog/static/>
-        Order allow,deny
-        Allow from all
-    </Directory>
-    ErrorLog ${APACHE_LOG_DIR}/error.log
-    LogLevel warn
-    CustomLog ${APACHE_LOG_DIR}/access.log combined
+            ServerName 174.129.232.166
+            ServerAlias ec2-174-129-232-166.compute-1.amazonaws.com
+            ServerAdmin admin@174.129.232.166
+            WSGIScriptAlias / /var/www/catalog/catalog.wsgi
+            WSGIDaemonProcess catalog python-path=/var/www/catalog:/var/www/catalog/catalog/catalog_venv/lib/python3.6/site-packages
+            WSGIProcessGroup catalog
+            <Directory /var/www/catalog/catalog/>
+                Order allow,deny
+                Allow from all
+            </Directory>
+            Alias /static /var/www/catalog/catalog/static
+            <Directory /var/www/catalog/catalog/static/>
+                Order allow,deny
+                Allow from all
+            </Directory>
+            ErrorLog ${APACHE_LOG_DIR}/error.log
+            LogLevel warn
+            CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 ```
 
-Enable the new virtual host `sudo a2ensite catalog`
+
+- ***`sudo a2ensite catalog.conf`*** # Enable the new virtual host 
 
 ### 13. Install and configure PostgressSQL
 
-Run `sudo apt install PostgreSQL`
+Install the PostgreSQL server along with the PostgreSQL contrib package which provides several additional features for the PostgreSQL database:
 
-Check if no remote connections are allowed with `sudo vim /etc/postgresql/10/main/pg_hba.conf`
+- ***`sudo apt-get install libpq-dev python-dev`*** # Install some necessary Python packages for working with PostgreSQL
+- ***`sudo apt install postgresql postgresql-contrib`*** 
 
-Login to postgress `sudo su - postgres` and `psql`
+Postgres is automatically creating a new user during its installation, whose name is 'postgres'. That is a tusted user who can access the database software.
 
-Create a new user `CREATE USER catalog WITH PASSWORD 'password'`
+- ***`sudo su - postgres`*** # Change the user
+- ***`psql`*** # connect to the database system 
+- ***`CREATE USER catalog WITH PASSWORD 'password';`*** # Create a new user called 'catalog' with his password
+- ***`ALTER USER catalog CREATEDB;`*** # Give *catalog* user the CREATEDB capability
+- ***`CREATE DATABASE catalog WITH OWNER catalog;`*** # Create the 'catalog' database owned by *catalog* user
+- ***`\c catalog`*** # Connect to the database
+- ***`REVOKE ALL ON SCHEMA public FROM public;`*** # Revoke all rights
+- ***`GRANT ALL ON SCHEMA public TO catalog;`*** # Lock down the permissions to only let *catalog* role create tables
+- ***`\q`*** # Log out from PostgreSQL
+- ***`exit`*** # Return to the *grader* user
 
-Create a DB called 'catalog' with `ALTER USER catalog CREATEDB` and `CREATE DATABASE catalog WITH OWNER catalog`
+Inside the Flask application, the database connection is now performed with: 
+```python
+engine = create_engine('postgresql://catalog:password@localhost/catalog')
+```
 
-Connect to the DB with `\c catalog`
+- ***`python3 /var/www/catalog/catalog/lotsOfCategorieswithusers.py`*** # Setup the database 
 
-Revoke all rights `REVOKE ALL ON SCHEMA public FROM public`
+To prevent potential attacks from the outer world we double check that no remote connections to the database are allowed. Open the following file:
+- ***`sudo vim /etc/postgresql/10/main/pg_hba.conf`*** # Check if no remote connections are allowed with and edit it, if necessary, to make it look like this: 
+```
+local   all             postgres                                peer
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            md5
+host    all             all             ::1/128                 md5
+```
+### 14 - Update OAuth authorized JavaScript origins
 
-Change a grand from public to catalog `GRANT ALL ON SCHEMA public TO catalog`
+To let users correctly log-in change the authorized URI to:
 
-Logout from postgress and return to the grader user ` \q` and `exit`
+[ec2-174-129-232-166.compute-1.amazonaws.com](http://ec2-174-129-232-166.compute-1.amazonaws.com/) on Google developer dashboard.
 
-Change the engine inside Flask application.
 
-`engine = create_engine('postgresql://catalog:password@localhost/catalog')`
+### 15. Restart Apache to launch the app 
 
-Set up the DB with `python /var/www/catalog/catalog/lotsOfCategorieswithusers.py`
+- ***`sudo service apache2 restart`*** # Restart Apache
 
-### 14. Restart Apache 
-
-Run `sudo service apache2 restart` and check `http://174.129.232.166/`
+Check `http://174.129.232.166/`
 
 ## References
-[Flask document](http://flask.pocoo.org/docs/1.0/deploying/mod_wsgi/)
 
-[Digital Ocean](https://www.digitalocean.com/community/tutorials/how-to-run-django-with-mod_wsgi-and-apache-with-a-virtualenv-python-environment-on-a-debian-vps)
-
+[Flask document-deployment](http://flask.pocoo.org/docs/0.12/deploying/#deployment)
+[Flask document](http://flask.pocoo.org/docs/0.12/deploying/mod_wsgi/)
+[Digital Ocean-mod_wsgi](https://www.digitalocean.com/community/tutorials/how-to-run-django-with-mod_wsgi-and-apache-with-a-virtualenv-python-environment-on-a-debian-vps)
+[DigitalOcean-postgresql](https://www.digitalocean.com/community/tutorials/how-to-secure-postgresql-on-an-ubuntu-vps)
+[DigitalOcean-apache-web-server](https://www.digitalocean.com/community/tutorials/how-to-install-the-apache-web-server-on-ubuntu-18-04)
 [iliketomatoes'repository](https://github.com/iliketomatoes/linux_server_configuration)
+https://linuxize.com/post/how-to-install-postgresql-on-ubuntu-18-04/
+https://www.digitalocean.com/community/tutorials/how-to-secure-postgresql-on-an-ubuntu-vps
 
 
-•	http://flask.pocoo.org/docs/0.12/deploying/#deployment
-•	http://flask.pocoo.org/docs/0.12/deploying/mod_wsgi/
 
 
 
