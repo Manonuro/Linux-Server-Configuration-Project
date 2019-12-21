@@ -46,7 +46,7 @@ Add ***`grader ALL=(ALL:ALL) ALL`***  in nano editor
 Set SSH keys for grader user with `ssh-keygen` in your local machine.
 - ***`ssh-keygen`***
 
-> #Enter file in which to save the key (/home/bcko/.ssh/id_rsa): grader
+> #Enter file in which to save the key (/home/nnnn/.ssh/id_rsa): grader
 #empty passphrase
 
 
@@ -106,15 +106,15 @@ Configure UDW to allow only incoming request from port2200(SSH), port80 (HTTP) a
 
 - ***`sudo ufw deny 22`*** # deny incoming request for port 22
 
-- ***`sudo ufw enable*** # enable ufw
+- ***`sudo ufw enable`*** # enable ufw
 
-- ***`sudo ufw status*** # check current status of ufw
+- ***`sudo ufw status`*** # check current status of ufw
 
 
 
 ### 7. Set up local time zone
 
-- ***`sudo dpkg-reconfigure tzdata`*** # choose UTC
+- ***`sudo dpkg-reconfigure tzdata`*** # choose EST
 
 ### 8. Install Apache application and wsgi module for python3
 
@@ -135,7 +135,7 @@ Configure your username and email. `git config --global user.name <username>` an
 - ***`sudo mkdir /var/www/catalog`*** # create catalog folder
 - ***`sudo chown -R grader:grader catalog`***
 - ***`cd /var/www/catalog`***
-- ***`sudo git clone https://github.com/Manonuro/fullstack-nanodegree-vm.git`***
+- ***`sudo git clone https://github.com/nnnn/fullstack-nanodegree-vm.git`***
 
 Add `catalog.wsgi` file.
 
@@ -144,34 +144,34 @@ Add `catalog.wsgi` file.
 and add the following code.
 
 ```
+#!/usr/bin/python3
 import sys
 import logging
 logging.basicConfig(stream=sys.stderr)
-sys.path.insert(0, "/var/www/catalog/")
+sys.path.insert(0, "/var/www/catalog/catalog/")
 
 from catalog import app as application
-application.secret_key = 'password'
+application.secret_key = 'super_secret_key'
+
 ```
+- ***`sudo chown grader:grader catalog.wsgi`*** # changing ownership of catalog.wsgi to grader
 
 Modify filenames to deploy on AWS.
-
 
 - ***`mv application.py  __init__.py`*** # Rename your `application.py` to `__init__.py` 
 
 
 ### 11. Install virtual environment and Flask framework
 Run the following command as sudo in order to install the build-essential, libssl-dev, libffi-dev and python-dev packages to your system:
-- ***`sudo apt-get install build-essential libssl-dev libffi-dev python-dev`*** 
+- ***`sudo apt install build-essential libssl-dev libffi-dev python-dev`*** 
 
 - ***`sudo apt install python3-pip`*** # Install `python3-pip`
 
-- ***`sudo apt-get upgrade python3`*** # upgrade python3 to latest version
+- ***`sudo apt upgrade python3`*** # upgrade python3 to latest version
 
 - ***`sudo apt install -y python3-venv`*** # Create the  virtual environment
 
-- ***`mkdir environment_directory`*** # create your stand-alone virtual environments
-
-In the environments directory, we will be creating a new virtual environment where you can write your Python programs and create projects.
+In the catalog directory, we will be creating a new virtual environment where you can write your Python programs and create projects.
 
 - ***`python3 -m venv catalog_venv`***  # creating a new virtual environment 
 - ***`source catalog_venv/bin/activate`*** # Activate the Python Virtual Environment
@@ -192,9 +192,12 @@ Install Flask and dependencies:
 - ***`sudo pip3 install bleach`***
 - ***`sudo pip3 install flask_sqlalchemy`***
 - ***`sudo pip3 install psycopg2-binary`***
+- ***`sudo pip3 install certifi`***
+- ***`sudo pip3 install --upgrade google-api-python-client oauth2client`***
 - ***`python3 -m pip install flask-sqlalchemy`***
 - ***`python3 -m pip install passlib`***
-- ***`python3 -m pip install psycopg2`***
+- ***`python3 -m pip install flask_httpauth`***
+- ***`python3 -m pip install chardet`***
 
 
 ### 12. Configure Apache and enable a new virtual host
@@ -208,10 +211,10 @@ Paste the following code:
 ```
 <VirtualHost *:80>
             ServerName 174.129.232.166
-            ServerAlias ec2-174-129-232-166.compute-1.amazonaws.com
+            ServerAlias 174.129.232.166.xip.io
             ServerAdmin admin@174.129.232.166
-            WSGIScriptAlias / /var/www/catalog/catalog.wsgi
-            WSGIDaemonProcess catalog python-path=/var/www/catalog:/var/www/catalog/catalog/catalog_venv/lib/python3.6/site-packages
+            WSGIScriptAlias / /var/www/catalog/catalog/catalog.wsgi
+            WSGIDaemonProcess catalog python-path=/var/www/catalog:/var/www/catalog/catalog/catalog_venv/lib/python3.6
             WSGIProcessGroup catalog
             <Directory /var/www/catalog/catalog/>
                 Order allow,deny
@@ -226,6 +229,7 @@ Paste the following code:
             LogLevel warn
             CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
+
 ```
 
 
@@ -235,14 +239,14 @@ Paste the following code:
 
 Install the PostgreSQL server along with the PostgreSQL contrib package which provides several additional features for the PostgreSQL database:
 
-- ***`sudo apt-get install libpq-dev python-dev`*** # Install some necessary Python packages for working with PostgreSQL
+- ***`sudo apt install libpq-dev python-dev`*** # Install some necessary Python packages for working with PostgreSQL
 - ***`sudo apt install postgresql postgresql-contrib`*** 
 
-Postgres is automatically creating a new user during its installation, whose name is 'postgres'. That is a tusted user who can access the database software.
+Postgres is automatically creating a new user during its installation, whose name is 'postgres'. That is a trusted user who can access the database software.
 
 - ***`sudo su - postgres`*** # Change the user
 - ***`psql`*** # connect to the database system 
-- ***`CREATE USER catalog WITH PASSWORD 'password';`*** # Create a new user called 'catalog' with his password
+- ***`CREATE USER catalog WITH PASSWORD 'password';`*** # Create a new user called 'catalog' with it's password
 - ***`ALTER USER catalog CREATEDB;`*** # Give *catalog* user the CREATEDB capability
 - ***`CREATE DATABASE catalog WITH OWNER catalog;`*** # Create the 'catalog' database owned by *catalog* user
 - ***`\c catalog`*** # Connect to the database
@@ -253,7 +257,7 @@ Postgres is automatically creating a new user during its installation, whose nam
 
 Inside the Flask application, the database connection is now performed with: 
 ```python
-engine = create_engine('postgresql://catalog:password@localhost/catalog')
+engine = create_engine('postgresql://catalog:pass@localhost/catalog')
 ```
 
 - ***`python3 /var/www/catalog/catalog/lotsOfCategorieswithusers.py`*** # Setup the database 
@@ -290,10 +294,12 @@ Check `http://174.129.232.166/`
 https://linuxize.com/post/how-to-install-postgresql-on-ubuntu-18-04/
 https://www.digitalocean.com/community/tutorials/how-to-secure-postgresql-on-an-ubuntu-vps
 
-
+#### Special thanks to [*BC Ko*](https://github.com/bcko) who wrote a really helpful README in his [repository](https://github.com/bcko/Ud-FS-LinuxServerConfig-LightSail).
 
 
 
 ## Authors
 
 * **Manouchehr Bagheri** - *Initial work* - [Manonuro](https://github.com/Manonuro)
+
+
